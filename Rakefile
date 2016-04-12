@@ -7,8 +7,12 @@ task :run do
   
 	Celluloid.logger.level = Logger::INFO
   
-	# read in config. config is 'hosts' style file
-	hosts = HostDB.from_lines(File.readlines 'config/hosts')
+  port = ENV['port'] || ENV['PORT'] || 53
+  interfaces = [:udp, :tcp].collect{|protocol| [protocol, '0.0.0.0', port.to_i]}
   
-  server = Server.new(hosts)
+	# read in config files -- 'hosts' style files
+	hosts = HostDB.from_lines(Dir.glob('config/*').flat_map{|file| File.readlines file})
+  
+  # start server
+  server = Server.new(hosts, interfaces: interfaces)
 end
