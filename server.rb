@@ -2,6 +2,7 @@
 
 require 'rubygems'
 require 'rubydns'
+require 'rubydns/system'
 require_relative 'hosts'
 
 class Server
@@ -14,9 +15,12 @@ class Server
 		[:udp, "0.0.0.0", 5300],
 		[:tcp, "0.0.0.0", 5300]
 	]
-	
+	UPSTREAM = RubyDNS::Resolver.new([[:udp, "8.8.8.8", 53], [:tcp, "8.8.8.8", 53]])
+
 	def initialize(hosts, interfaces: INTERFACES, asynchronous: false)
-		@server = RubyDNS::run_server(:listen => interfaces, asynchronous: asynchronous) do
+		RubyDNS::run_server(:listen => interfaces, asynchronous: asynchronous) do
+			fallback_resolver_supervisor = RubyDNS::Resolver.supervise(RubyDNS::System.nameservers)
+			
 			# set up A records
 			hosts.each do |host|
 				match(host.hostname, IN::A) do |request|
@@ -36,7 +40,8 @@ class Server
 			
 			# Default DNS handler
 			otherwise do |transaction|
-				transaction.fail!(:NXDomain)
+				logger.info 'Passing DNS request upstream...'
+				transaction.passthrough!(fallback_resolver_supervisor.actors.first)
 			end
 		end
 	end
