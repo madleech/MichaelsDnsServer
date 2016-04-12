@@ -1,0 +1,9 @@
+version: '2'
+services:
+  rubydns:
+    build: .
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+    volumes:
+      - ./config:/usr/src/app/config
