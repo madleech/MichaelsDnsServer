@@ -7,12 +7,17 @@ describe Server do
 
 	let(:interfaces) {[[:udp, "0.0.0.0", 5300]]}
 	
-	def start_server(hosts = example_hosts)
+	def start_server(**opts)
+		hosts = opts[:hosts] || example_hosts
+		opts[:upstream] ||= false
+		opts[:interfaces] ||= interfaces
+		opts[:asynchronous] ||= true
+		
 		Celluloid.shutdown
 		Celluloid.boot
 		
 		hosts = HostDB.from_lines(hosts)
-		server = Server.new(hosts, interfaces: interfaces, asynchronous: true)
+		server = Server.new(hosts, opts)
 	end
 	
 	let(:example_hosts) {[
@@ -54,5 +59,9 @@ describe Server do
 		expect(resolver.query("5.4.3.2.in-addr.arpa", IN::PTR)).to be_addr 'root.wildcarddomain.'
 		expect(resolver.query("6.5.4.3.2.in-addr.arpa", IN::PTR)).to be_nxdomain
 	end
-		
+	
+	it "should do recursive lookups" do
+		start_server(upstream: [[:udp, '8.8.8.8', 53]])
+		expect(resolver.query("www.google.com", IN::A)).to_not be_nxdomain
+	end
 end

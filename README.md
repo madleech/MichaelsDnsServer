@@ -6,6 +6,15 @@ Simple DNS server built on top of [RubyDNS](https://github.com/ioquatix/rubydns)
 * Run `bundle exec rake` to start the server. Set the env-var `PORT` to us a different port; default is port 53.
 * Test the output: `dig @127.0.0.1 -p <port> <your dns query>`
 
+## Upstream/Recursive Resolution
+By default, the system name servers are used for upstream resolution. If this isn't what you desire, you can set the env-var `UPSTREAM` to a comma separated list of ip addresses, or to a blank string to return `NXDomain`.
+
+E.g.
+
+* `rake run UPSTREAM=8.8.8.8` to use Google's DNS servers.
+* `rake run UPSTREAM=10.0.0.1,8.8.8.8' to use your router, or failing that, Google.
+* `rake run UPSTREAM=` to not run recusively.
+
 ## Config File Format
 Config file is more-or-less a `/etc/hosts` style file. You can copy your existing hosts file there and it should work without any changes.
 

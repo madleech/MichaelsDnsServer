@@ -15,11 +15,10 @@ class Server
 		[:udp, "0.0.0.0", 5300],
 		[:tcp, "0.0.0.0", 5300]
 	]
-	UPSTREAM = RubyDNS::Resolver.new([[:udp, "8.8.8.8", 53], [:tcp, "8.8.8.8", 53]])
 
-	def initialize(hosts, interfaces: INTERFACES, asynchronous: false)
+	def initialize(hosts, interfaces: INTERFACES, asynchronous: false, upstream: nil)
 		RubyDNS::run_server(:listen => interfaces, asynchronous: asynchronous) do
-			fallback_resolver_supervisor = RubyDNS::Resolver.supervise(RubyDNS::System.nameservers)
+			fallback_resolver_supervisor = RubyDNS::Resolver.supervise(upstream) if upstream
 			
 			# set up A records
 			hosts.each do |host|
@@ -40,8 +39,12 @@ class Server
 			
 			# Default DNS handler
 			otherwise do |transaction|
-				logger.info 'Passing DNS request upstream...'
-				transaction.passthrough!(fallback_resolver_supervisor.actors.first)
+				if fallback_resolver_supervisor
+					logger.info "Passing DNS request upstream... #{transaction}"
+					transaction.passthrough!(fallback_resolver_supervisor.actors.first)
+				else
+					transaction.fail!(:NXDomain)
+				end
 			end
 		end
 	end
